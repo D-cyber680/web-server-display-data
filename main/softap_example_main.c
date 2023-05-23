@@ -1,11 +1,4 @@
-/*  WiFi softAP Example
 
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -30,148 +23,73 @@ static const char *TAG = "webserver";
 
 #define LED GPIO_NUM_2
 
+double temp = 50;
+double hum = 40;
+
+char html_page[] = "<!DOCTYPE HTML><html>\n"
+                   "<head>\n"
+                   "  <title>ESP-IDF DHT22 Web Server</title>\n"
+                   "  <meta http-equiv=\"refresh\" content=\"10\">\n"
+                   "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+                   "  <link rel=\"stylesheet\" href=\"https://use.fontawesome.com/releases/v5.7.2/css/all.css\" integrity=\"sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr\" crossorigin=\"anonymous\">\n"
+                   "  <link rel=\"icon\" href=\"data:,\">\n"
+                   "  <style>\n"
+                   "    html {font-family: Arial; display: inline-block; text-align: center;}\n"
+                   "    p {  font-size: 1.2rem;}\n"
+                   "    body {  margin: 0;}\n"
+                   "    .topnav { overflow: hidden; background-color: #241d4b; color: white; font-size: 1.7rem; }\n"
+                   "    .content { padding: 20px; }\n"
+                   "    .card { background-color: white; box-shadow: 2px 2px 12px 1px rgba(140,140,140,.5); }\n"
+                   "    .cards { max-width: 700px; margin: 0 auto; display: grid; grid-gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }\n"
+                   "    .reading { font-size: 2.8rem; }\n"
+                   "    .card.temperature { color: #0e7c7b; }\n"
+                   "    .card.humidity { color: #17bebb; }\n"
+                   "  </style>\n"
+                   "</head>\n"
+                   "<body>\n"
+                   "  <div class=\"topnav\">\n"
+                   "    <h3>ESP-IDF DHT22 WEB SERVER</h3>\n"
+                   "  </div>\n"
+                   "  <div class=\"content\">\n"
+                   "    <div class=\"cards\">\n"
+                   "      <div class=\"card temperature\">\n"
+                   "        <h4><i class=\"fas fa-thermometer-half\"></i> TEMPERATURE</h4><p><span class=\"reading\">%.2f&deg;C</span></p>\n"
+                   "      </div>\n"
+                   "      <div class=\"card humidity\">\n"
+                   "        <h4><i class=\"fas fa-tint\"></i> HUMIDITY</h4><p><span class=\"reading\">%.2f</span> &percnt;</span></p>\n"
+                   "      </div>\n"
+                   "    </div>\n"
+                   "  </div>\n"
+                   "</body>\n"
+                   "</html>";
+
+
+
 /******************  WEBSEVER CODE BEGINS ***********************/
-
-static esp_err_t ledOFF_handler(httpd_req_t *req)
+esp_err_t send_web_page(httpd_req_t *req)
 {
-	esp_err_t error;
-	ESP_LOGI(TAG, "LED Turned OFF");
-	gpio_set_level(LED, 0);
-	const char *response = (const char *) req->user_ctx;
-	error = httpd_resp_send(req, response, strlen(response));
-	if (error != ESP_OK)
-	{
-		ESP_LOGI(TAG, "Error %d while sending Response", error);
-	}
-	else ESP_LOGI(TAG, "Response sent Successfully");
-	return error;
+    int response;
+    //DHT_readings();
+    char response_data[sizeof(html_page) + 50];
+    memset(response_data, 0, sizeof(response_data));
+    sprintf(response_data, html_page, temp, hum);
+    response = httpd_resp_send(req, response_data, HTTPD_RESP_USE_STRLEN);
+
+    return response;
 }
 
-static const httpd_uri_t ledoff = {
-    .uri       = "/ledoff",
-    .method    = HTTP_GET,
-    .handler   = ledOFF_handler,
-    /* Let's pass response string in user
-     * context to demonstrate it's usage */
-    .user_ctx  = "<!DOCTYPE html>\
-<html>\
-<head>\
-<style>\
-.button {\
-  border: none;\
-  color: white;\
-  padding: 15px 32px;\
-  text-align: center;\
-  text-decoration: none;\
-  display: inline-block;\
-  font-size: 16px;\
-  margin: 4px 2px;\
-  cursor: pointer;\
-}\
-\
-.button1 {background-color: #4CAF50;} /* Green */\
-</style>\
-</head>\
-<body>\
-\
-<h1>ESP32 WEBSERVER</h1>\
-<p>Toggle the onboard LED (GPIO2)</p>\
-<h3> LED STATE : OFF </h3>\
-\
-<button class=\"button button1\" onclick= \"window.location.href='/ledon'\">LED ON</button>\
-\
-</body>\
-</html>"
-};
-
-
-static esp_err_t ledON_handler(httpd_req_t *req)
+esp_err_t get_req_handler(httpd_req_t *req)
 {
-	esp_err_t error;
-	ESP_LOGI(TAG, "LED Turned ON");
-	gpio_set_level(LED, 1);
-	const char *response = (const char *) req->user_ctx;
-	error = httpd_resp_send(req, response, strlen(response));
-	if (error != ESP_OK)
-	{
-		ESP_LOGI(TAG, "Error %d while sending Response", error);
-	}
-	else ESP_LOGI(TAG, "Response sent Successfully");
-	return error;
+    return send_web_page(req);
 }
-
-static const httpd_uri_t ledon = {
-    .uri       = "/ledon",
-    .method    = HTTP_GET,
-    .handler   = ledON_handler,
-    /* Let's pass response string in user
-     * context to demonstrate it's usage */
-    .user_ctx  = "<!DOCTYPE html>\
-<html>\
-<head>\
-<style>\
-.button {\
-  border: none;\
-  color: white;\
-  padding: 15px 32px;\
-  text-align: center;\
-  text-decoration: none;\
-  display: inline-block;\
-  font-size: 16px;\
-  margin: 4px 2px;\
-  cursor: pointer;\
-}\
-\
-.button1 {background-color: #000000;} /* Green */\
-</style>\
-</head>\
-<body>\
-\
-<h1>ESP32 WEBSERVER</h1>\
-<p>Toggle the onboard LED (GPIO2)</p>\
-<h3> LED STATE : ON </h3>\
-\
-<button class=\"button button1\" onclick= \"window.location.href='/ledoff'\">LED OFF</button>\
-\
-</body>\
-</html>"
-};
 
 static const httpd_uri_t root = {
     .uri       = "/",
     .method    = HTTP_GET,
-    .handler   = ledOFF_handler,
+    .handler   = get_req_handler,
     /* Let's pass response string in user
      * context to demonstrate it's usage */
-    .user_ctx  = "<!DOCTYPE html>\
-<html>\
-<head>\
-<style>\
-.button {\
-  border: none;\
-  color: white;\
-  padding: 15px 32px;\
-  text-align: center;\
-  text-decoration: none;\
-  display: inline-block;\
-  font-size: 16px;\
-  margin: 4px 2px;\
-  cursor: pointer;\
-}\
-\
-.button1 {background-color: #4CAF50;} /* Green */\
-</style>\
-</head>\
-<body>\
-\
-<h1>ESP32 WEBSERVER</h1>\
-<p>Toggle the onboard LED (GPIO2)</p>\
-<h3> LED STATE : OFF </h3>\
-\
-<button class=\"button button1\" onclick= \"window.location.href='/ledon'\">LED ON</button>\
-\
-</body>\
-</html>"
+    .user_ctx  = NULL
 };
 
 
@@ -193,8 +111,6 @@ static httpd_handle_t start_webserver(void)
     if (httpd_start(&server, &config) == ESP_OK) {
         // Set URI handlers
         ESP_LOGI(TAG, "Registering URI handlers");
-        httpd_register_uri_handler(server, &ledoff);
-        httpd_register_uri_handler(server, &ledon);
         httpd_register_uri_handler(server, &root);
         return server;
     }
