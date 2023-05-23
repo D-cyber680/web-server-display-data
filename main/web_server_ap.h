@@ -21,6 +21,9 @@
 
  
 static const char *TAG = "webserver";
+extern double temp;
+extern double hum;
+
 
 #define LED GPIO_NUM_2
 
